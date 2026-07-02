@@ -1,0 +1,9 @@
+gspread
+google-auth
+python-dotenv
+groq
+supabase
+pandas
+openpyxl
+playwright
+streamlit
