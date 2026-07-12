@@ -48,8 +48,17 @@ def download_diza() -> Path:
         print('Set filter Status = All...')
         frame.locator("#f-status").select_option("All")
 
-        print('Set filter PIC = PT. ANTAREJA MAHADA MAKMUR...')
-        frame.locator("#f-pic").select_option("PT. ANTAREJA MAHADA MAKMUR")
+        print('Pilih PIC = PT. ANTAREJA MAHADA MAKMUR...')
+        frame.locator("#f-pic-container div").filter(has_text="Semua PIC/Dept").click()
+        frame.locator("#f-pic-dropdown label").filter(has_text="Pilih Semua").click()
+        frame.locator("#f-pic-dropdown").get_by_text("PT. ANTAREJA MAHADA MAKMUR").click()
+
+        print('Terapkan filter...')
+        frame.get_by_text("HAZARD TRACKER Admin Filter").click()
+
+        print('Buka tampilan Detail Temuan...')
+        frame.locator("div").filter(has_text="DETAIL TEMUAN").nth(1).click()
+        frame.locator("#page-detail > .header > .fa-solid").click()
 
         print('Download Excel...')
         with page.expect_download() as dl_info:

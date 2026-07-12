@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ENV → TOML</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #f5f5f5; min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+  .card { background: white; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,.08); padding: 2rem; width: 100%; max-width: 640px; }
+  h1 { font-size: 1.2rem; font-weight: 700; margin-bottom: .25rem; }
+  p { font-size: .875rem; color: #666; margin-bottom: 1.5rem; }
+  label { font-size: .8rem; font-weight: 600; color: #444; display: block; margin-bottom: .4rem; }
+  textarea { width: 100%; height: 160px; border: 1.5px solid #ddd; border-radius: 8px; padding: .75rem; font-family: monospace; font-size: .85rem; resize: vertical; outline: none; transition: border-color .2s; }
+  textarea:focus { border-color: #4f7cff; }
+  button.convert { width: 100%; margin: 1rem 0; padding: .75rem; background: #4f7cff; color: white; border: none; border-radius: 8px; font-size: .95rem; font-weight: 600; cursor: pointer; transition: background .2s; }
+  button.convert:hover { background: #3a63e0; }
+  .result-wrap { position: relative; display: none; }
+  .result-wrap textarea { height: 160px; background: #f8faff; border-color: #c5d3ff; }
+  button.copy { position: absolute; top: .5rem; right: .5rem; padding: .3rem .7rem; font-size: .75rem; background: #4f7cff; color: white; border: none; border-radius: 6px; cursor: pointer; }
+  button.copy:hover { background: #3a63e0; }
+  .note { font-size: .78rem; color: #888; margin-top: .75rem; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🔄 ENV → Streamlit Secrets (TOML)</h1>
+  <p>Paste isi file <code>.env</code> kamu, klik Convert, lalu copy hasilnya ke Streamlit Secrets.</p>
+
+  <label>Isi .env</label>
+  <textarea id="input" placeholder="SHEET_ID=1abc...&#10;GROQ_API_KEY=gsk_xxx&#10;GOOGLE_CREDS_JSON={&quot;type&quot;:...}"></textarea>
+
+  <button class="convert" onclick="convert()">Convert →</button>
+
+  <div class="result-wrap" id="resultWrap">
+    <label>Hasil TOML — copy ke Streamlit Secrets</label>
+    <textarea id="output" readonly></textarea>
+    <button class="copy" onclick="copyResult()">Copy</button>
+    <p class="note">💡 Baris yang kosong atau komentar (#) diabaikan otomatis.</p>
+  </div>
+</div>
+
+<script>
+function convert() {
+  const lines = document.getElementById('input').value.split('\n');
+  const toml = [];
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+
+    const eq = line.indexOf('=');
+    if (eq === -1) continue;
+
+    const key = line.slice(0, eq).trim();
+    const val = line.slice(eq + 1).trim();
+
+    // Nilai yang sudah ada kutip — pakai apa adanya, ganti ke double quote
+    const unquoted = val.replace(/^['"]|['"]$/g, '');
+
+    // JSON atau ada karakter spesial → single quote agar aman
+    const needsSingle = unquoted.includes('"');
+    const quote = needsSingle ? "'" : '"';
+
+    toml.push(`${key} = ${quote}${unquoted}${quote}`);
+  }
+
+  const result = toml.join('\n');
+  document.getElementById('output').value = result;
+  document.getElementById('resultWrap').style.display = 'block';
+}
+
+function copyResult() {
+  const ta = document.getElementById('output');
+  navigator.clipboard.writeText(ta.value).then(() => {
+    const btn = document.querySelector('button.copy');
+    btn.textContent = '✓ Copied!';
+    setTimeout(() => btn.textContent = 'Copy', 1500);
+  });
+}
+</script>
+</body>
+</html>
