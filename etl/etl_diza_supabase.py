@@ -4,6 +4,7 @@ Baca langsung dari Google Sheets GID 1732323997 → klasifikasi Groq → upsert 
 """
 
 import json, os, time
+from datetime import datetime, timezone
 from dotenv import load_dotenv
 import gspread
 from google.oauth2.service_account import Credentials
@@ -248,6 +249,12 @@ def main():
         sb.table('diza_reports').delete().in_('id', to_delete).execute()
     else:
         print('  Tidak ada baris yang perlu dihapus.')
+
+    sb.table('etl_sync_status').upsert({
+        'branch': 'diza',
+        'last_synced_at': datetime.now(timezone.utc).isoformat(),
+    }).execute()
+    print('  Stempel waktu sync "diza" tercatat.')
 
     print('DIZA ETL selesai.')
 
