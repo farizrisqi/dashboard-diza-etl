@@ -17,7 +17,7 @@ SHEET_ID   = os.environ['SHEET_ID']
 DIZA_GID   = 1732323997
 PAGE_SIZE  = 500
 BATCH_SIZE = 20
-MODELS     = ['llama-3.3-70b-versatile', 'qwen/qwen3-32b', 'llama-3.1-8b-instant']
+MODELS     = ['openai/gpt-oss-120b', 'qwen/qwen3.6-27b', 'openai/gpt-oss-20b']
 
 SCOPES = ['https://www.googleapis.com/auth/spreadsheets.readonly']
 
@@ -59,15 +59,26 @@ _DIZA_BULAN = {
     'May':5,'Aug':8,'Oct':10,'Dec':12,
 }
 
+def _fix_tahun(year: int) -> int:
+    """Perbaiki typo tahun dari input manual (form/sheet) — laporan temuan
+    tidak mungkin bertanggal di masa depan.
+    - year > 2099: typo abad, mis. 2126 -> 2026 (geser 1 abad)
+    - year > tahun berjalan: typo digit tahun, mis. 2029 -> 2026 (clamp ke tahun ini)
+    """
+    if year > 2099:
+        year -= 100
+    now_year = datetime.now(timezone.utc).year
+    if year > now_year:
+        year = now_year
+    return year
+
 def parse_waktu(s: str):
     if not s: return None
     p = s.strip().split()
     if len(p) < 3: return None
     m = _DIZA_BULAN.get(p[1])
     if not m: return None
-    year = int(p[2])
-    if year > 2099:
-        year -= 100  # typo century, e.g. 2126 → 2026
+    year = _fix_tahun(int(p[2]))
     t = p[3] if len(p) > 3 else '00:00'
     return f"{year}-{m:02d}-{int(p[0]):02d}T{t}:00"
 
@@ -81,7 +92,7 @@ def parse_tanggal(s: str):
     p = s.strip().split()
     if len(p) >= 3:
         m = _DIZA_BULAN.get(p[1])
-        if m: return f"{int(p[2])}-{m:02d}-{int(p[0]):02d}"
+        if m: return f"{_fix_tahun(int(p[2]))}-{m:02d}-{int(p[0]):02d}"
     return None
 
 
@@ -133,7 +144,9 @@ def klasifikasi_groq(rows):
                     print(f'    Rate limit, tunggu {delay}s...')
                     time.sleep(delay); delay *= 2
                 except APIStatusError as e:
-                    if e.status_code in (413, 429): break
+                    # 400/404 = model tidak valid/tidak ada (mis. sudah decommission) —
+                    # retry model yang sama tidak akan pernah berhasil, langsung ganti model
+                    if e.status_code in (400, 404, 413, 429): break
                     if attempt == 3: raise
                     time.sleep(delay); delay *= 2
             if resp: break
